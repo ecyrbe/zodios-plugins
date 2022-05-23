@@ -1,10 +1,14 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
-import { Zodios } from "../zodios";
-import {
+import { ZodiosInstance } from "@zodios/core";
+import type {
   AxiosRetryRequestConfig,
-  TokenProvider,
   ZodiosEnpointDescriptions,
-} from "../zodios.types";
+} from "@zodios/core";
+
+export type TokenProvider = {
+  getToken: () => Promise<string | undefined>;
+  renewToken?: () => Promise<void>;
+};
 
 function createRequestInterceptor(provider: TokenProvider) {
   return async (config: AxiosRequestConfig) => {
@@ -19,7 +23,7 @@ function createRequestInterceptor(provider: TokenProvider) {
   };
 }
 
-function createResponseInterceptor(
+function createErrorResponseInterceptor(
   instance: AxiosInstance,
   provider: TokenProvider
 ) {
@@ -28,7 +32,7 @@ function createResponseInterceptor(
       const retryConfig = error.config as AxiosRetryRequestConfig;
       if (error.response?.status === 401 && !retryConfig.retried) {
         retryConfig.retried = true;
-        provider.renewToken();
+        await provider.renewToken();
         return instance.request(retryConfig);
       }
     }
@@ -39,12 +43,12 @@ function createResponseInterceptor(
 export function pluginToken<Api extends ZodiosEnpointDescriptions>(
   provider: TokenProvider
 ) {
-  return (zodios: Zodios<Api>) => {
+  return (zodios: ZodiosInstance<Api>) => {
     zodios.axios.interceptors.request.use(createRequestInterceptor(provider));
     if (provider?.renewToken) {
       zodios.axios.interceptors.response.use(
         undefined,
-        createResponseInterceptor(zodios.axios, provider)
+        createErrorResponseInterceptor(zodios.axios, provider)
       );
     }
   };
