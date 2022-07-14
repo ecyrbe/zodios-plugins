@@ -1,20 +1,18 @@
-import { AxiosRequestConfig } from "axios";
-import { ZodiosInstance } from "@zodios/core";
-import type { ZodiosEnpointDescriptions } from "@zodios/core";
+import type { ZodiosPlugin } from "@zodios/core";
 
-export function pluginHeader<Api extends ZodiosEnpointDescriptions>(
+export function pluginHeader(
   key: string,
   valueFn: () => Promise<string>
-) {
-  return (zodios: ZodiosInstance<Api>) => {
-    zodios.axios.interceptors.request.use(
-      async (config: AxiosRequestConfig) => {
-        config.headers = {
+): ZodiosPlugin {
+  return {
+    request: async (_, config) => {
+      return {
+        ...config,
+        headers: {
           ...config.headers,
           [key]: await valueFn(),
-        };
-        return config;
-      }
-    );
+        },
+      };
+    },
   };
 }

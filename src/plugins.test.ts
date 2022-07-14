@@ -22,6 +22,11 @@ const api = asApi([
     response: z.object({ token: z.string() }),
   },
   {
+    method: "get",
+    path: "/error",
+    response: z.void(),
+  },
+  {
     method: "post",
     path: "/json",
     response: z.object({ accept: z.string(), content: z.string() }),
@@ -46,6 +51,10 @@ describe("Plugins", () => {
     });
     app.get("/expired-token", (req, res) => {
       res.status(401).json({ error: "token expired" });
+    });
+    app.get("/error", (req, res) => {
+      console.log("/error");
+      res.status(500).json({ error: "unexpected error" });
     });
     app.post("/json", (req, res) => {
       res.status(200).json({
@@ -74,6 +83,34 @@ describe("Plugins", () => {
     expect(token).toEqual({
       token: "Bearer token",
     });
+  });
+
+  it("should get back undefined token", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api, {
+      validateResponse: false,
+    });
+    client.use(pluginToken({ getToken: async () => undefined }));
+    const token = await client.get("/token");
+    expect(token).toEqual({});
+  });
+
+  it("should rethrow error", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api);
+    client.use(
+      pluginToken({
+        getToken: async () => "token",
+        renewToken: async () => {},
+      })
+    );
+    let error: AxiosError | undefined = undefined;
+    try {
+      await client.get("/error");
+    } catch (e) {
+      error = e as AxiosError;
+    }
+    expect(error).toBeDefined();
+    expect(error?.response?.status).toBe(500);
+    expect(error?.response?.data).toEqual({ error: "unexpected error" });
   });
 
   it("should try to renew token", async () => {

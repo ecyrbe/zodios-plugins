@@ -1,9 +1,10 @@
 import { AxiosRequestConfig } from "axios";
-import { ZodiosInstance } from "@zodios/core";
+import { ZodiosInstance, ZodiosPlugin } from "@zodios/core";
 import type { ZodiosEnpointDescriptions } from "@zodios/core";
 
-function createRequestInterceptor() {
-  return async (config: AxiosRequestConfig) => {
+const plugin: ZodiosPlugin = {
+  name: "api",
+  request: async (api, config) => {
     // istanbul ignore next
     if (!config.headers) {
       config.headers = {};
@@ -21,15 +22,13 @@ function createRequestInterceptor() {
       };
     }
     return config;
-  };
-}
+  },
+};
 
 /**
  * plugin that add application/json header to all requests
  * @param zodios
  */
-export function pluginApi<Api extends ZodiosEnpointDescriptions>() {
-  return (zodios: ZodiosInstance<Api>) => {
-    zodios.axios.interceptors.request.use(createRequestInterceptor());
-  };
+export function pluginApi() {
+  return plugin;
 }
