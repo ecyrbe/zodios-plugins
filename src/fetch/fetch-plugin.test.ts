@@ -1,0 +1,182 @@
+import "cross-fetch/polyfill";
+import { AxiosError } from "axios";
+import express from "express";
+import { AddressInfo } from "net";
+import z from "zod";
+import { Zodios, asApi } from "@zodios/core";
+import { pluginApi, pluginFetch } from "../index";
+
+globalThis.btoa = (a: string) => Buffer.from(a).toString("base64");
+globalThis.atob = (a: string) => Buffer.from(a, "base64").toString();
+
+const userSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
+
+const api = asApi([
+  {
+    method: "get",
+    path: "/token",
+    response: z.object({ token: z.string() }),
+  },
+  {
+    method: "get",
+    path: "/expired-token",
+    response: z.object({ token: z.string() }),
+  },
+  {
+    method: "get",
+    path: "/error",
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/json",
+    response: z.object({ accept: z.string(), content: z.string() }),
+  },
+  {
+    method: "get",
+    path: "/json",
+    response: z.object({ accept: z.string() }),
+  },
+  {
+    method: "get",
+    path: "/query",
+    parameters: [
+      {
+        name: "a",
+        type: "Query",
+        schema: z.string(),
+      },
+      {
+        name: "b",
+        type: "Query",
+        schema: z.string(),
+      },
+    ],
+    response: z.object({ query: z.record(z.string()) }),
+  },
+  {
+    method: "get",
+    path: "/auth",
+    response: z.object({ login: z.string(), password: z.string() }),
+  },
+] as const);
+
+describe("Plugins", () => {
+  let app: express.Express;
+  let server: ReturnType<typeof app.listen>;
+  let port: number;
+
+  beforeAll(async () => {
+    app = express();
+    app.use(express.json());
+    app.get("/error", (req, res) => {
+      console.log("/error");
+      res.status(500).json({ error: "unexpected error" });
+    });
+    app.post("/json", (req, res) => {
+      res.status(200).json({
+        accept: req.headers.accept,
+        content: req.headers["content-type"],
+      });
+    });
+    app.get("/json", (req, res) => {
+      res.status(200).json({
+        accept: req.headers.accept,
+      });
+    });
+    app.get("/query", (req, res) => {
+      res.status(200).json({
+        query: req.query,
+      });
+    });
+    app.get("/auth", (req, res) => {
+      const token = req.headers.authorization?.split(" ")[1] ?? "";
+      const auth = atob(token)?.split(":");
+      res.status(200).json({
+        login: auth[0],
+        password: auth[1],
+      });
+    });
+
+    server = app.listen(0);
+    port = (server.address() as AddressInfo).port;
+  });
+
+  afterAll(() => {
+    server.close();
+  });
+
+  it("should rethrow error", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api);
+    client.use(pluginFetch());
+    let error: AxiosError | undefined = undefined;
+    try {
+      await client.get("/error");
+    } catch (e) {
+      error = e as AxiosError;
+    }
+    expect(error).toBeDefined();
+    expect(error?.response?.status).toBe(500);
+    expect(error?.response?.data).toEqual({ error: "unexpected error" });
+  });
+
+  it("should use json as content type", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api);
+    client.use(pluginFetch());
+    client.use(pluginApi());
+    const token = await client.post("/json");
+    expect(token).toEqual({
+      content: "application/json",
+      accept: "application/json",
+    });
+  });
+
+  it("should use json as accept type", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api);
+    client.use(pluginFetch());
+    client.use(pluginApi());
+    const token = await client.get("/json");
+    expect(token).toEqual({
+      accept: "application/json",
+    });
+  });
+
+  it("should use query as params", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api);
+    client.use(pluginFetch());
+    client.use(pluginApi());
+    const token = await client.get("/query", {
+      queries: {
+        a: "testa",
+        b: "testb",
+      },
+    });
+    expect(token).toEqual({
+      query: {
+        a: "testa",
+        b: "testb",
+      },
+    });
+  });
+
+  it("should use auth", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api, {
+      validate: false,
+    });
+    client.use(pluginFetch());
+    client.use(pluginApi());
+    const auth = await client.get("/auth", {
+      auth: {
+        username: "test",
+        password: "test",
+      },
+    });
+    expect(auth).toEqual({
+      login: "test",
+      password: "test",
+    });
+  });
+});
