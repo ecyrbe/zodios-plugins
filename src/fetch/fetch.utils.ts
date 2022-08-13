@@ -1,5 +1,36 @@
 import { AxiosFetchRequestConfig } from "./fetch.types";
 
+// istanbul ignore next
+export function isBrowser(): boolean {
+  return (
+    typeof window !== "undefined" && typeof window.document !== "undefined"
+  );
+}
+
+/**
+ * more resilient alternative to instanceof when the object is not native and compiled to es5
+ * @param kind - string representation of the object kind
+ * @returns - a function that checks if the object is of the given kind
+ */
+// istanbul ignore next
+export const isKindOf =
+  (kind: string) =>
+  (data: any): boolean => {
+    const pattern = `[object ${kind}]`;
+    return (
+      data &&
+      (toString.call(data) === pattern ||
+        (typeof data.toString === "function" && data.toString() === pattern))
+    );
+  };
+
+// istanbul ignore next
+export const isFormData = isKindOf("FormData");
+// istanbul ignore next
+export const isBlob = isKindOf("Blob");
+// istanbul ignore next
+export const isFile = isKindOf("File");
+
 export function getSearchParams(config: AxiosFetchRequestConfig<any>) {
   if (config.params) {
     return config.paramsSerializer

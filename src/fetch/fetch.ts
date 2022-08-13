@@ -12,6 +12,10 @@ import {
   findCookieByName,
   getFullURL,
   getSearchParams,
+  isBlob,
+  isBrowser,
+  isFile,
+  isFormData,
 } from "./fetch.utils";
 
 /**
@@ -40,6 +44,14 @@ export const fetchAdapter: AxiosAdapter = async (conf) => {
 
 // istanbul ignore next
 function createFetchRequest(config: AxiosFetchRequestConfig) {
+  if (
+    isBrowser() &&
+    (isFormData(config.data) || isBlob(config.data) || isFile(config.data)) &&
+    config.headers?.["Content-Type"]
+  ) {
+    delete config.headers["Content-Type"];
+  }
+
   const headers = new Headers(config.headers as HeadersInit);
 
   if (config.auth) {

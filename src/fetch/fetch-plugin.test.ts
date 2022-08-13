@@ -33,7 +33,38 @@ const api = asApi([
   {
     method: "post",
     path: "/json",
-    response: z.object({ accept: z.string(), content: z.string() }),
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({
+          test: z.string(),
+        }),
+      },
+    ],
+    response: z.object({
+      accept: z.string(),
+      content: z.string(),
+      body: z.record(z.any()),
+    }),
+  },
+  {
+    method: "post",
+    path: "/form",
+    requestFormat: "form-data",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({
+          test: z.string(),
+        }),
+      },
+    ],
+    response: z.object({
+      accept: z.string(),
+      content: z.string(),
+    }),
   },
   {
     method: "get",
@@ -77,9 +108,11 @@ describe("Plugins", () => {
       res.status(500).json({ error: "unexpected error" });
     });
     app.post("/json", (req, res) => {
+      console.log(req.body);
       res.status(200).json({
         accept: req.headers.accept,
         content: req.headers["content-type"],
+        body: req.body,
       });
     });
     app.get("/json", (req, res) => {
@@ -98,6 +131,12 @@ describe("Plugins", () => {
       res.status(200).json({
         login: auth[0],
         password: auth[1],
+      });
+    });
+    app.post("/form", (req, res) => {
+      res.status(200).json({
+        accept: req.headers.accept,
+        content: req.headers["content-type"],
       });
     });
 
@@ -127,10 +166,11 @@ describe("Plugins", () => {
     const client = new Zodios(`http://localhost:${port}`, api);
     client.use(pluginFetch());
     client.use(pluginApi());
-    const token = await client.post("/json");
-    expect(token).toEqual({
+    const result = await client.post("/json", { test: "test" });
+    expect(result).toEqual({
       content: "application/json",
       accept: "application/json",
+      body: { test: "test" },
     });
   });
 
@@ -159,6 +199,17 @@ describe("Plugins", () => {
         a: "testa",
         b: "testb",
       },
+    });
+  });
+
+  it("should use form-data as content type", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api);
+    client.use(pluginFetch());
+    client.use(pluginApi());
+    const result = await client.post("/form", { test: "test" });
+    expect(result).toEqual({
+      content: expect.stringContaining("multipart/form-data"),
+      accept: "application/json",
     });
   });
 
