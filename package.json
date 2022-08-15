@@ -35,7 +35,7 @@
   "devDependencies": {
     "@types/axios": "0.14.0",
     "@types/express": "4.17.13",
-    "@types/jest": "28.1.6",
+    "@types/jest": "28.1.7",
     "@types/node": "17.0.17",
     "@zodios/core": "7.3.0",
     "axios": "0.27.2",
