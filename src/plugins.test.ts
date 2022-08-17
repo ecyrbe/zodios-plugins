@@ -36,7 +36,7 @@ const api = asApi([
     path: "/json",
     response: z.object({ accept: z.string() }),
   },
-] as const);
+]);
 
 describe("Plugins", () => {
   let app: express.Express;

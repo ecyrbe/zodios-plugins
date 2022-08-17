@@ -93,7 +93,7 @@ const api = asApi([
     path: "/auth",
     response: z.object({ login: z.string(), password: z.string() }),
   },
-] as const);
+]);
 
 describe("Plugins", () => {
   let app: express.Express;
