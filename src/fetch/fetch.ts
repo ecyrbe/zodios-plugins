@@ -8,15 +8,15 @@ import {
 } from "axios";
 import { AxiosFetchRequestConfig } from "./fetch.types";
 import {
-  combineURLParams,
   findCookieByName,
   getFullURL,
-  getSearchParams,
   isBlob,
   isBrowser,
   isFile,
   isFormData,
 } from "./fetch.utils";
+
+const buildURL = require("axios/lib/helpers/buildURL");
 
 /**
  * fetch adapter for axios
@@ -94,9 +94,10 @@ function createFetchRequest(config: AxiosFetchRequestConfig) {
         : "omit",
   };
 
-  const url = combineURLParams(
+  const url = buildURL(
     getFullURL(config) ?? "/",
-    getSearchParams(config)
+    config.params,
+    config.paramsSerializer
   );
 
   return new Request(url, fetchOptions);

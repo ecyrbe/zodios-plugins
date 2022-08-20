@@ -83,10 +83,10 @@ const api = asApi([
       {
         name: "b",
         type: "Query",
-        schema: z.string(),
+        schema: z.array(z.string()),
       },
     ],
-    response: z.object({ query: z.record(z.string()) }),
+    response: z.object({ query: z.record(z.string().or(z.array(z.string()))) }),
   },
   {
     method: "get",
@@ -120,17 +120,17 @@ describe("Plugins", () => {
         accept: req.headers.accept,
       });
     });
-    app.get("/query", (req, res) => {
-      res.status(200).json({
-        query: req.query,
-      });
-    });
     app.get("/auth", (req, res) => {
       const token = req.headers.authorization?.split(" ")[1] ?? "";
       const auth = atob(token)?.split(":");
       res.status(200).json({
         login: auth[0],
         password: auth[1],
+      });
+    });
+    app.get("/query", (req, res) => {
+      res.status(200).json({
+        query: req.query,
       });
     });
     app.post("/form", (req, res) => {
@@ -185,19 +185,21 @@ describe("Plugins", () => {
   });
 
   it("should use query as params", async () => {
-    const client = new Zodios(`http://localhost:${port}`, api);
+    const client = new Zodios(`http://localhost:${port}`, api, {
+      validate: true,
+    });
     client.use(pluginFetch());
     client.use(pluginApi());
-    const token = await client.get("/query", {
+    const result = await client.get("/query", {
       queries: {
         a: "testa",
-        b: "testb",
+        b: ["testb", "testc"],
       },
     });
-    expect(token).toEqual({
+    expect(result).toEqual({
       query: {
         a: "testa",
-        b: "testb",
+        b: ["testb", "testc"],
       },
     });
   });

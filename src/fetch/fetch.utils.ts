@@ -31,15 +31,6 @@ export const isBlob = isKindOf("Blob");
 // istanbul ignore next
 export const isFile = isKindOf("File");
 
-export function getSearchParams(config: AxiosFetchRequestConfig<any>) {
-  if (config.params) {
-    return config.paramsSerializer
-      ? config.paramsSerializer(config.params)
-      : new URLSearchParams(config.params).toString();
-  }
-  return undefined;
-}
-
 export function getFullURL(config: AxiosFetchRequestConfig<any>) {
   // istanbul ignore next
   if (config.url?.startsWith("http") || !config.baseURL) {
@@ -63,12 +54,4 @@ export function findCookieByName(name: string) {
     return match ? decodeURIComponent(match[3]) : undefined;
   }
   return undefined;
-}
-
-export function combineURLParams(url: string, searchParams?: string) {
-  if (searchParams) {
-    // istanbul ignore next
-    return url + (url.indexOf("?") === -1 ? "?" : "&") + searchParams;
-  }
-  return url;
 }
