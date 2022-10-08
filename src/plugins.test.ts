@@ -2,7 +2,7 @@ import { AxiosError } from "axios";
 import express from "express";
 import { AddressInfo } from "net";
 import z from "zod";
-import { Zodios, asApi } from "@zodios/core";
+import { Zodios, makeApi } from "@zodios/core";
 import { pluginToken, pluginHeader, pluginApi } from "./index";
 
 const userSchema = z.object({
@@ -10,7 +10,7 @@ const userSchema = z.object({
   name: z.string(),
 });
 
-const api = asApi([
+const api = makeApi([
   {
     method: "get",
     path: "/token",
@@ -50,10 +50,13 @@ describe("Plugins", () => {
       res.status(200).json({ token: req.headers.authorization });
     });
     app.get("/expired-token", (req, res) => {
-      res.status(401).json({ error: "token expired" });
+      if (req.headers.authorization?.includes("expired")) {
+        res.status(401).json({ error: "token expired" });
+      } else {
+        res.status(200).json({ token: req.headers.authorization });
+      }
     });
     app.get("/error", (req, res) => {
-      console.log("/error");
       res.status(500).json({ error: "unexpected error" });
     });
     app.post("/json", (req, res) => {
@@ -99,7 +102,7 @@ describe("Plugins", () => {
     client.use(
       pluginToken({
         getToken: async () => "token",
-        renewToken: async () => {},
+        renewToken: async () => "token",
       })
     );
     let error: AxiosError | undefined = undefined;
@@ -113,12 +116,79 @@ describe("Plugins", () => {
     expect(error?.response?.data).toEqual({ error: "unexpected error" });
   });
 
-  it("should try to renew token", async () => {
+  it("should renew token", async () => {
     const client = new Zodios(`http://localhost:${port}`, api);
+    let token = "expired";
     client.use(
       pluginToken({
-        getToken: async () => "token",
-        renewToken: async () => {},
+        getToken: async () => token,
+        renewToken: async () => {
+          token = "token";
+          return token;
+        },
+      })
+    );
+    let error: AxiosError | undefined = undefined;
+    let result;
+    try {
+      result = await client.get("/expired-token");
+    } catch (e) {
+      error = e as AxiosError;
+    }
+    expect(error).toBeUndefined();
+    expect(result).toEqual({ token: "Bearer token" });
+  });
+
+  it("should throw 401 if failing to renew token", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api);
+    let token = "expired";
+    client.use(
+      pluginToken({
+        getToken: async () => token,
+        renewToken: async () => {
+          token = "expired really";
+          return token;
+        },
+      })
+    );
+    let error: AxiosError | undefined = undefined;
+    try {
+      await client.get("/expired-token");
+    } catch (e) {
+      error = e as AxiosError;
+    }
+    expect(error).toBeDefined();
+    expect(error?.response?.status).toBe(401);
+    expect(error?.response?.data).toEqual({ error: "token expired" });
+  });
+
+  it("should throw 401 if renewed token is undefined", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api);
+    let token = "expired";
+    client.use(
+      pluginToken({
+        getToken: async () => token,
+        renewToken: async () => undefined,
+      })
+    );
+    let error: AxiosError | undefined = undefined;
+    try {
+      await client.get("/expired-token");
+    } catch (e) {
+      error = e as AxiosError;
+    }
+    expect(error).toBeDefined();
+    expect(error?.response?.status).toBe(401);
+    expect(error?.response?.data).toEqual({ error: "token expired" });
+  });
+
+  it("should throw 401 if renewed token don't change", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api);
+    let token = "expired";
+    client.use(
+      pluginToken({
+        getToken: async () => token,
+        renewToken: async () => token,
       })
     );
     let error: AxiosError | undefined = undefined;

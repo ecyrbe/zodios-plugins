@@ -1,4 +1,5 @@
 import { AxiosFetchRequestConfig } from "./fetch.types";
+import qs from "qs";
 
 // istanbul ignore next
 export function isBrowser(): boolean {
@@ -30,6 +31,8 @@ export const isFormData = isKindOf("FormData");
 export const isBlob = isKindOf("Blob");
 // istanbul ignore next
 export const isFile = isKindOf("File");
+// istanbul ignore next
+export const isSearchParams = isKindOf("URLSearchParams");
 
 export function getFullURL(config: AxiosFetchRequestConfig<any>) {
   // istanbul ignore next
@@ -43,6 +46,18 @@ export function getFullURL(config: AxiosFetchRequestConfig<any>) {
     return baseURL;
   }
   return `${baseURL}/${path}`;
+}
+
+export function buildURL(config: AxiosFetchRequestConfig<any>) {
+  let fullURL = getFullURL(config) || "/";
+  const serializedParams = qs.stringify(config.params, {
+    arrayFormat: "brackets",
+    encodeValuesOnly: true,
+  });
+  if (serializedParams) {
+    fullURL += fullURL.indexOf("?") === -1 ? "?" : "&";
+  }
+  return `${fullURL}${serializedParams}`;
 }
 
 // istanbul ignore next

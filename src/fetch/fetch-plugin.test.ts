@@ -104,11 +104,9 @@ describe("Plugins", () => {
     app = express();
     app.use(express.json());
     app.get("/error", (req, res) => {
-      console.log("/error");
       res.status(500).json({ error: "unexpected error" });
     });
     app.post("/json", (req, res) => {
-      console.log(req.body);
       res.status(200).json({
         accept: req.headers.accept,
         content: req.headers["content-type"],

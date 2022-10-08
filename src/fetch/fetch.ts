@@ -8,15 +8,13 @@ import {
 } from "axios";
 import { AxiosFetchRequestConfig } from "./fetch.types";
 import {
+  buildURL,
   findCookieByName,
-  getFullURL,
   isBlob,
   isBrowser,
   isFile,
   isFormData,
 } from "./fetch.utils";
-
-const buildURL = require("axios/lib/helpers/buildURL");
 
 /**
  * fetch adapter for axios
@@ -77,7 +75,7 @@ function createFetchRequest(config: AxiosFetchRequestConfig) {
     method: config.method?.toUpperCase() || "GET",
     headers,
     body: config.data,
-    signal: config.signal,
+    signal: config.signal as AbortSignal,
     mode: config.mode,
     cache: config.cache,
     integrity: config.integrity,
@@ -94,12 +92,7 @@ function createFetchRequest(config: AxiosFetchRequestConfig) {
         : "omit",
   };
 
-  const url = buildURL(
-    getFullURL(config) ?? "/",
-    config.params,
-    config.paramsSerializer
-  );
-
+  const url = buildURL(config);
   return new Request(url, fetchOptions);
 }
 
@@ -147,6 +140,7 @@ async function getAxiosResponse(
   response: Response,
   config: AxiosFetchRequestConfig
 ) {
+  // @ts-ignore
   const headers: AxiosResponseHeaders = {};
   response.headers.forEach((value, name) => {
     headers[name.toLowerCase()] = value;

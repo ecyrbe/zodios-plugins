@@ -1,11 +1,18 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { ZodiosPlugin } from "@zodios/core";
 import type { AxiosRetryRequestConfig } from "@zodios/core";
+import { inspect } from "util";
 
 export type TokenProvider = {
   getToken: () => Promise<string | undefined>;
-  renewToken?: () => Promise<void>;
+  renewToken?: () => Promise<string | undefined>;
 };
+
+function isTokenRenewed(newToken: string | undefined, error: AxiosError) {
+  if (!(newToken && error.config.headers)) return false;
+  const oldCredentials = error.config.headers["Authorization"] as string;
+  return !oldCredentials.includes(newToken);
+}
 
 export function pluginToken(provider: TokenProvider): ZodiosPlugin {
   return {
@@ -24,12 +31,23 @@ export function pluginToken(provider: TokenProvider): ZodiosPlugin {
     },
     error: provider.renewToken
       ? async (_, __, error) => {
-          if (axios.isAxiosError(error) && provider.renewToken) {
-            const retryConfig = error.config as AxiosRetryRequestConfig;
-            if (error.response?.status === 401 && !retryConfig.retried) {
-              retryConfig.retried = true;
-              await provider.renewToken();
-              return axios(retryConfig);
+          if (
+            axios.isAxiosError(error) &&
+            provider.renewToken &&
+            error.config
+          ) {
+            if (error.response?.status === 401) {
+              const newToken = await provider.renewToken();
+              if (isTokenRenewed(newToken, error)) {
+                const retryConfig = error.config;
+                // @ts-ignore
+                retryConfig.headers = {
+                  ...retryConfig.headers,
+                  Authorization: `Bearer ${newToken}`,
+                };
+                // retry with new token and without interceptors
+                return axios(retryConfig);
+              }
             }
           }
           throw error;
