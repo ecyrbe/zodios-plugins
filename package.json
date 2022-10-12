@@ -1,7 +1,7 @@
 {
   "name": "@zodios/plugins",
   "description": "Plugins for zodios",
-  "version": "9.1.0",
+  "version": "9.1.1",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
