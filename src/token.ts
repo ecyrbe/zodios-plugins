@@ -1,7 +1,5 @@
 import axios, { AxiosError } from "axios";
 import { ZodiosPlugin } from "@zodios/core";
-import type { AxiosRetryRequestConfig } from "@zodios/core";
-import { inspect } from "util";
 
 export type TokenProvider = {
   getToken: () => Promise<string | undefined>;
@@ -39,7 +37,7 @@ export function pluginToken(provider: TokenProvider): ZodiosPlugin {
             if (error.response?.status === 401) {
               const newToken = await provider.renewToken();
               if (isTokenRenewed(newToken, error)) {
-                const retryConfig = error.config;
+                const retryConfig = { ...error.config };
                 // @ts-ignore
                 retryConfig.headers = {
                   ...retryConfig.headers,
