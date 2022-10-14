@@ -3,7 +3,7 @@ import { AxiosError } from "axios";
 import express from "express";
 import { AddressInfo } from "net";
 import z from "zod";
-import { Zodios, asApi } from "@zodios/core";
+import { Zodios, makeApi } from "@zodios/core";
 import { pluginApi, pluginFetch } from "../index";
 
 globalThis.btoa = (a: string) => Buffer.from(a).toString("base64");
@@ -14,7 +14,7 @@ const userSchema = z.object({
   name: z.string(),
 });
 
-const api = asApi([
+const api = makeApi([
   {
     method: "get",
     path: "/token",
