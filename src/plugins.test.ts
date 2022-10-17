@@ -90,7 +90,7 @@ describe("Plugins", () => {
 
   it("should get back undefined token", async () => {
     const client = new Zodios(`http://localhost:${port}`, api, {
-      validateResponse: false,
+      validate: false,
     });
     client.use(pluginToken({ getToken: async () => undefined }));
     const token = await client.get("/token");
