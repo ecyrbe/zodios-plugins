@@ -29,6 +29,13 @@ const api = makeApi([
   {
     method: "post",
     path: "/json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: userSchema,
+      },
+    ],
     response: z.object({ accept: z.string(), content: z.string() }),
   },
   {
@@ -214,7 +221,7 @@ describe("Plugins", () => {
   it("should use json as content type", async () => {
     const client = new Zodios(`http://localhost:${port}`, api);
     client.use(pluginApi());
-    const token = await client.post("/json");
+    const token = await client.post("/json", { name: "test", id: 1 });
     expect(token).toEqual({
       content: "application/json",
       accept: "application/json",
