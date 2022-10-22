@@ -43,7 +43,6 @@ export const fetchAdapter: AxiosAdapter = async (conf) => {
 // istanbul ignore next
 function createFetchRequest(config: AxiosFetchRequestConfig) {
   if (
-    isBrowser() &&
     (isFormData(config.data) || isBlob(config.data) || isFile(config.data)) &&
     config.headers?.["Content-Type"]
   ) {

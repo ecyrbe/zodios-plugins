@@ -1,3 +1,4 @@
+globalThis.FormData = require("form-data");
 import "cross-fetch/polyfill";
 import { AxiosError } from "axios";
 import express from "express";
@@ -204,8 +205,8 @@ describe("Plugins", () => {
 
   it("should use form-data as content type", async () => {
     const client = new Zodios(`http://localhost:${port}`, api);
-    client.use(pluginFetch());
     client.use(pluginApi());
+    client.use(pluginFetch());
     const result = await client.post("/form", { test: "test" });
     expect(result).toEqual({
       content: expect.stringContaining("multipart/form-data"),
