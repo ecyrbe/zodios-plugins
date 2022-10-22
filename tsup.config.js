@@ -10,6 +10,7 @@ export default defineConfig({
     "src/header.ts",
     "src/token.ts",
   ],
+  platform: "browser",
   outDir: "lib",
   format: ["cjs", "esm"],
   minify: true,

@@ -1,13 +1,6 @@
 import { AxiosFetchRequestConfig } from "./fetch.types";
 import qs from "qs";
 
-// istanbul ignore next
-export function isBrowser(): boolean {
-  return (
-    typeof window !== "undefined" && typeof window.document !== "undefined"
-  );
-}
-
 /**
  * more resilient alternative to instanceof when the object is not native and compiled to es5
  * @param kind - string representation of the object kind

@@ -11,7 +11,6 @@ import {
   buildURL,
   findCookieByName,
   isBlob,
-  isBrowser,
   isFile,
   isFormData,
 } from "./fetch.utils";
