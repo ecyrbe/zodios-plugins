@@ -1,4 +1,6 @@
-globalThis.FormData = require("form-data");
+if (!globalThis.FormData) {
+  globalThis.FormData = require("form-data");
+}
 import "cross-fetch/polyfill";
 import { AxiosError } from "axios";
 import express from "express";
