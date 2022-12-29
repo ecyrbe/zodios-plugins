@@ -7,16 +7,34 @@ export type TokenProvider = {
 };
 
 function isTokenRenewed(newToken: string | undefined, error: AxiosError) {
-  if (!(newToken && error.config?.headers)) return false;
-  const oldCredentials = error.config.headers["Authorization"] as string;
-  return !oldCredentials.includes(newToken);
+  return newToken && getTokenFromHeader(error) !== newToken;
+}
+
+function getTokenFromHeader(error: AxiosError) {
+  if (error.config?.headers) {
+    const oldCredentials = error.config.headers["Authorization"] as string;
+    return oldCredentials.replace("Bearer ", "");
+  }
+  return undefined;
 }
 
 export function pluginToken(provider: TokenProvider): ZodiosPlugin {
+  let asyncRenewPending = Promise.resolve<string | undefined>(undefined);
+  let expiredToken: string | undefined;
+
   return {
     request: async (_, config) => {
-      const token = await provider.getToken();
+      let token = await provider.getToken();
       if (token) {
+        // Wait for any pending renew request
+        if (token === expiredToken) {
+          try {
+            token = await asyncRenewPending;
+          } catch (error) {
+            throw new axios.Cancel("Renew token request failed");
+          }
+        }
+
         return {
           ...config,
           headers: {
@@ -35,7 +53,13 @@ export function pluginToken(provider: TokenProvider): ZodiosPlugin {
             error.config
           ) {
             if (error.response?.status === 401) {
-              const newToken = await provider.renewToken();
+              const thisToken = getTokenFromHeader(error);
+              if (expiredToken !== thisToken) {
+                expiredToken = thisToken;
+                asyncRenewPending = provider.renewToken();
+              }
+              const newToken = await asyncRenewPending;
+
               if (isTokenRenewed(newToken, error)) {
                 const retryConfig = { ...error.config };
                 // @ts-ignore
