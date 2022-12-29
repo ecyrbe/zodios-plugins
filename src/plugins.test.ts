@@ -220,7 +220,7 @@ describe("Plugins", () => {
 
   it("should pause outgoing request while renewal is in progress", async () => {
     const client = new Zodios(`http://localhost:${port}`, api);
-    const axiosSpy = jest.spyOn(client.axios, 'request');
+    const axiosSpy = jest.spyOn(client.axios, "request");
 
     let secondaryRequest:
       | Promise<ZodiosResponseByPath<typeof api, "get", "/expired-token">>
@@ -231,8 +231,8 @@ describe("Plugins", () => {
       getToken: jest.fn(async () => token),
       renewToken: jest.fn(async () => {
         // Fire a second request while renewing the token
-        secondaryRequest = client.get("/expired-token");
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        secondaryRequest ??= client.get("/expired-token");
+        await new Promise((resolve) => setTimeout(resolve, 250));
         token = "token";
         return token;
       }),
@@ -257,6 +257,8 @@ describe("Plugins", () => {
     let token = "expired";
     const getToken = jest.fn(async () => token);
     const renewToken = jest.fn(async () => {
+      // Simulate a slow renewal
+      await new Promise((resolve) => setTimeout(resolve, 250));
       token = "token";
       return token;
     });
