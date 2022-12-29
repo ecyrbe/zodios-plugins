@@ -2,8 +2,8 @@ import { AxiosError } from "axios";
 import express from "express";
 import { AddressInfo } from "net";
 import z from "zod";
-import { Zodios, makeApi } from "@zodios/core";
-import { pluginToken, pluginHeader, pluginApi } from "./index";
+import { Zodios, makeApi, ZodiosResponseByPath } from "@zodios/core";
+import { pluginToken, pluginHeader, pluginApi, TokenProvider } from "./index";
 
 const userSchema = z.object({
   id: z.number(),
@@ -216,6 +216,69 @@ describe("Plugins", () => {
     expect(token).toEqual({
       token: "Basic auth",
     });
+  });
+
+  it("should pause outgoing request while renewal is in progress", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api);
+    const axiosSpy = jest.spyOn(client.axios, 'request');
+
+    let secondaryRequest:
+      | Promise<ZodiosResponseByPath<typeof api, "get", "/expired-token">>
+      | undefined = undefined;
+
+    let token = "expired";
+    let provider: TokenProvider = {
+      getToken: jest.fn(async () => token),
+      renewToken: jest.fn(async () => {
+        // Fire a second request while renewing the token
+        secondaryRequest = client.get("/expired-token");
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        token = "token";
+        return token;
+      }),
+    };
+    client.use(pluginToken(provider));
+
+    // First request
+    const result = client.get("/expired-token");
+    expect(await result).toEqual({ token: "Bearer token" });
+
+    // Second request
+    expect(await secondaryRequest).toEqual({ token: "Bearer token" });
+
+    // Check that the token was renewed only once & only 2 requests were made
+    expect(provider.getToken).toBeCalledTimes(2);
+    expect(provider.renewToken).toBeCalledTimes(1);
+    expect(axiosSpy).toBeCalledTimes(2);
+  });
+
+  it("should limit renewals to one per token", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api);
+    let token = "expired";
+    const getToken = jest.fn(async () => token);
+    const renewToken = jest.fn(async () => {
+      token = "token";
+      return token;
+    });
+    client.use(pluginToken({ getToken, renewToken }));
+    let error: AxiosError | undefined = undefined;
+    let results: Array<
+      ZodiosResponseByPath<typeof api, "get", "/expired-token">
+    > = [];
+    try {
+      results = await Promise.all([
+        client.get("/expired-token"),
+        client.get("/expired-token"),
+      ]);
+    } catch (e) {
+      error = e as AxiosError;
+    }
+    expect(error).toBeUndefined();
+    expect(results).toEqual([
+      { token: "Bearer token" },
+      { token: "Bearer token" },
+    ]);
+    expect(renewToken).toBeCalledTimes(1);
   });
 
   it("should use json as content type", async () => {
