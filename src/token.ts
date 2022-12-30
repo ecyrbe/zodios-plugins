@@ -1,5 +1,5 @@
 import axios, { AxiosError } from "axios";
-import { ZodiosPlugin } from "@zodios/core";
+import { ZodiosError, ZodiosPlugin } from "@zodios/core";
 
 export type TokenProvider = {
   getToken: () => Promise<string | undefined>;
@@ -14,15 +14,21 @@ function isTokenRenewed(newToken: string | undefined, error: AxiosError) {
 
 export function pluginToken(provider: TokenProvider): ZodiosPlugin {
   let pendingRenew: Promise<string | undefined> | undefined;
+  let isRenewPending = false;
 
   return {
     request: async (_, config) => {
-      if (pendingRenew) {
+      if (isRenewPending) {
         // Wait for any pending renew request
         try {
           await pendingRenew;
         } catch (error) {
-          throw new axios.Cancel("Renew token request failed");
+          throw new ZodiosError(
+            "Renew token request failed",
+            config,
+            undefined,
+            error instanceof Error ? error : undefined
+          );
         }
       }
       const token = await provider.getToken();
@@ -46,9 +52,10 @@ export function pluginToken(provider: TokenProvider): ZodiosPlugin {
             error.config
           ) {
             if (error.response?.status === 401) {
-              if (!pendingRenew) {
+              if (!isRenewPending) {
+                isRenewPending = true;
                 pendingRenew = provider.renewToken().then((token) => {
-                  pendingRenew = undefined;
+                  isRenewPending = false;
                   return token;
                 });
               }
