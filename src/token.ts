@@ -1,5 +1,5 @@
 import axios, { AxiosError } from "axios";
-import { ZodiosPlugin } from "@zodios/core";
+import { ZodiosError, ZodiosPlugin } from "@zodios/core";
 
 export type TokenProvider = {
   getToken: () => Promise<string | undefined>;
@@ -13,8 +13,24 @@ function isTokenRenewed(newToken: string | undefined, error: AxiosError) {
 }
 
 export function pluginToken(provider: TokenProvider): ZodiosPlugin {
+  let pendingRenew: Promise<string | undefined> | undefined;
+  let isRenewPending = false;
+
   return {
     request: async (_, config) => {
+      if (isRenewPending) {
+        // Wait for any pending renew request
+        try {
+          await pendingRenew;
+        } catch (error) {
+          throw new ZodiosError(
+            "Renew token request failed",
+            config,
+            undefined,
+            error instanceof Error ? error : undefined
+          );
+        }
+      }
       const token = await provider.getToken();
       if (token) {
         return {
@@ -25,6 +41,7 @@ export function pluginToken(provider: TokenProvider): ZodiosPlugin {
           },
         };
       }
+
       return config;
     },
     error: provider.renewToken
@@ -35,7 +52,15 @@ export function pluginToken(provider: TokenProvider): ZodiosPlugin {
             error.config
           ) {
             if (error.response?.status === 401) {
-              const newToken = await provider.renewToken();
+              if (!isRenewPending) {
+                isRenewPending = true;
+                pendingRenew = provider.renewToken().then((token) => {
+                  isRenewPending = false;
+                  return token;
+                });
+              }
+              const newToken = await pendingRenew;
+
               if (isTokenRenewed(newToken, error)) {
                 const retryConfig = { ...error.config };
                 // @ts-ignore
