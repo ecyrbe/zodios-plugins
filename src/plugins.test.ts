@@ -3,7 +3,7 @@ import express from "express";
 import { AddressInfo } from "net";
 import z from "zod";
 import { Zodios, makeApi } from "@zodios/core";
-import { pluginToken, pluginHeader, pluginApi } from "./index";
+import { pluginToken, pluginHeader, pluginApi, pluginBaseURL } from "./index";
 
 const userSchema = z.object({
   id: z.number(),
@@ -43,6 +43,11 @@ const api = makeApi([
     path: "/json",
     response: z.object({ accept: z.string() }),
   },
+  {
+    method: "get",
+    path: "/baseURL",
+    response: z.object({ baseURL: z.string() }),
+  },
 ]);
 
 describe("Plugins", () => {
@@ -76,6 +81,9 @@ describe("Plugins", () => {
       res.status(200).json({
         accept: req.headers.accept,
       });
+    });
+    app.get("/baseURL", (req, res) => {
+      res.status(200).json({ baseURL: req.protocol + "://" + req.get("host") });
     });
 
     server = app.listen(0);
@@ -234,6 +242,16 @@ describe("Plugins", () => {
     const token = await client.get("/json");
     expect(token).toEqual({
       accept: "application/json",
+    });
+  });
+
+  it("should override the baseURL", async () => {
+    const client = new Zodios(`http://initial-url:${port}`, api);
+    const newBaseURL = `http://localhost:${port}`;
+    client.use(pluginBaseURL(newBaseURL));
+    const baseURL = await client.get("/baseURL");
+    expect(baseURL).toEqual({
+      baseURL: newBaseURL,
     });
   });
 });
