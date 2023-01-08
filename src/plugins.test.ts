@@ -3,7 +3,7 @@ import express from "express";
 import { AddressInfo } from "net";
 import z from "zod";
 import { Zodios, makeApi } from "@zodios/core";
-import { pluginToken, pluginHeader, pluginApi, pluginBaseURL } from "./index";
+import { pluginToken, pluginHeader, pluginClearHeader, pluginApi, pluginBaseURL } from "./index";
 
 const userSchema = z.object({
   id: z.number(),
@@ -48,6 +48,11 @@ const api = makeApi([
     path: "/baseURL",
     response: z.object({ baseURL: z.string() }),
   },
+  {
+    method: "get",
+    path: "/header",
+    response: z.object({ basic_header: z.string().nullable().optional() }),
+  },
 ]);
 
 describe("Plugins", () => {
@@ -84,6 +89,13 @@ describe("Plugins", () => {
     });
     app.get("/baseURL", (req, res) => {
       res.status(200).json({ baseURL: req.protocol + "://" + req.get("host") });
+    });
+    app.get("/header", (req, res) => {
+      if (req.headers.hasOwnProperty("basic_header")) {
+        res.status(200).json({ basic_header: req.headers.basic_header });
+      } else {
+        res.status(200).json({});
+      }
     });
 
     server = app.listen(0);
@@ -253,5 +265,13 @@ describe("Plugins", () => {
     expect(baseURL).toEqual({
       baseURL: newBaseURL,
     });
+  });
+
+  it("should clear the injected header", async () => {
+    const client = new Zodios(`http://localhost:${port}`, api);
+    client.use(pluginHeader("basic_header", async () => "Any value"));
+    client.use(pluginClearHeader("basic_header"));
+    const header = await client.get("/header");
+    expect(header).not.toHaveProperty("basic_header");
   });
 });
