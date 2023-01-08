@@ -1,8 +1,8 @@
 import type { ZodiosPlugin } from "@zodios/core";
 
 /**
- * clear one header
- * @param baseURL - the header key to be deleted
+ * delete an existing header
+ * @param key - the header key to be deleted
  * @returns ZodiosPlugin
  */
 export function pluginClearHeader(key: string): ZodiosPlugin {
