@@ -27,7 +27,7 @@ export const isFile = isKindOf("File");
 // istanbul ignore next
 export const isSearchParams = isKindOf("URLSearchParams");
 
-export function getFullURL(config: AxiosFetchRequestConfig<any>) {
+export function getFullURL(config: AxiosFetchRequestConfig) {
   // istanbul ignore next
   if (config.url?.startsWith("http") || !config.baseURL) {
     return config.url;
@@ -41,7 +41,7 @@ export function getFullURL(config: AxiosFetchRequestConfig<any>) {
   return `${baseURL}/${path}`;
 }
 
-export function buildURL(config: AxiosFetchRequestConfig<any>) {
+export function buildURL(config: AxiosFetchRequestConfig) {
   let fullURL = getFullURL(config) || "/";
   const serializedParams = qs.stringify(config.params, {
     arrayFormat: "brackets",

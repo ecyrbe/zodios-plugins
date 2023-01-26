@@ -6,7 +6,10 @@ import {
   AxiosError,
   AxiosResponseHeaders,
 } from "axios";
-import { AxiosFetchRequestConfig } from "./fetch.types";
+import {
+  AxiosFetchRequestConfig,
+  AxiosRequestConfigError,
+} from "./fetch.types";
 import {
   buildURL,
   findCookieByName,
@@ -31,7 +34,7 @@ export const fetchAdapter: AxiosAdapter = async (conf) => {
     throw new AxiosError(
       axiosResponse.statusText,
       `${axiosResponse.status}`,
-      config,
+      config as AxiosRequestConfigError,
       request,
       axiosResponse
     );
@@ -72,7 +75,7 @@ function createFetchRequest(config: AxiosFetchRequestConfig) {
   const fetchOptions: RequestInit = {
     method: config.method?.toUpperCase() || "GET",
     headers,
-    body: config.data,
+    body: config.data as any,
     signal: config.signal as AbortSignal,
     mode: config.mode,
     cache: config.cache,
@@ -100,10 +103,7 @@ function createFetchRequest(config: AxiosFetchRequestConfig) {
  * @param config - AxiosFetchRequestConfig
  * @returns fetch Response
  */
-async function fetchRequest(
-  request: Request,
-  config: AxiosFetchRequestConfig<any>
-) {
+async function fetchRequest(request: Request, config: AxiosFetchRequestConfig) {
   try {
     return await fetch(request);
   } catch (error) {
@@ -112,14 +112,14 @@ async function fetchRequest(
       throw new AxiosError(
         error.message,
         AxiosError.ERR_NETWORK,
-        config,
+        config as AxiosRequestConfigError,
         request
       );
     } else {
       throw new AxiosError(
         "Network Error",
         AxiosError.ERR_NETWORK,
-        config,
+        config as AxiosRequestConfigError,
         request
       );
     }
@@ -147,7 +147,7 @@ async function getAxiosResponse(
   const result: AxiosResponse = {
     request,
     headers,
-    config,
+    config: config as any,
     status: response.status,
     statusText: response.statusText,
     data: await getResponseData(response, config),

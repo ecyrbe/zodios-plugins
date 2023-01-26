@@ -1,6 +1,11 @@
 /// <reference lib="dom" />
 
-import { AxiosRequestConfig } from "axios";
+import axios, { AxiosError } from "axios";
+
+type AxiosRequestConfig = Parameters<typeof axios.request>[0];
+export type AxiosRequestConfigError = ConstructorParameters<
+  typeof AxiosError
+>[2];
 
 export interface FetchPluginOptions {
   mode?: RequestMode;
@@ -13,6 +18,6 @@ export interface FetchPluginOptions {
   redirect?: RequestRedirect;
 }
 
-export interface AxiosFetchRequestConfig<D = any>
-  extends AxiosRequestConfig<D>,
+export interface AxiosFetchRequestConfig
+  extends AxiosRequestConfig,
     FetchPluginOptions {}
