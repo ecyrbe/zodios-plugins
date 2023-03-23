@@ -16,6 +16,7 @@ export interface FetchPluginOptions {
   referrerPolicy?: ReferrerPolicy;
   credentials?: RequestCredentials;
   redirect?: RequestRedirect;
+  fetch?: typeof fetch;
 }
 
 export interface AxiosFetchRequestConfig

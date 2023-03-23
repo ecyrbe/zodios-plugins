@@ -105,7 +105,8 @@ function createFetchRequest(config: AxiosFetchRequestConfig) {
  */
 async function fetchRequest(request: Request, config: AxiosFetchRequestConfig) {
   try {
-    return await fetch(request);
+    const fetchFn = config.fetch || fetch;
+    return await fetchFn(request);
   } catch (error) {
     // istanbul ignore next
     if (error instanceof Error) {
