@@ -47,7 +47,7 @@
     "axios": "^0.x || ^1.0.0"
   },
   "devDependencies": {
-    "@types/express": "4.17.18",
+    "@types/express": "4.17.19",
     "@types/jest": "29.5.5",
     "@types/node": "18.18.4",
     "@zodios/core": "10.9.6",
